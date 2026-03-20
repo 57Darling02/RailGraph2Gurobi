@@ -1,0 +1,33 @@
+﻿project:
+  name: demo
+  output_dir: outputs/demo
+
+input:
+  timetable_path: inputs/下行计划时刻表.xlsx
+  mileage_path: inputs/区间里程.xlsx
+  timetable_sheet_name: Sheet1
+  mileage_sheet_name: Sheet1
+
+solver:
+  objective_delay_weight: 1.0
+  objective_mode: abs
+  arr_arr_headway_seconds: 180
+  dep_dep_headway_seconds: 180
+  dwell_seconds_at_stops: 120
+  big_m: 100000
+  tolerance_delay_seconds: 7200
+
+scenarios:
+  delays:
+    - train_id: G2661
+      station: jinanxi
+      event_type: dep
+      seconds: 600
+  speed_limits: []
+  interruptions: []
+
+analyze:
+  enable_metrics: true
+  enable_plot: true
+  plot_grid: true
+  plot_title: Train Timetable

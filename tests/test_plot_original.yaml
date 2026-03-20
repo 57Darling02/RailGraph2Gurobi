@@ -1,0 +1,43 @@
+project:
+  name: test_plot_original
+  output_dir: outputs/test_plot_original
+
+input:
+  timetable_path: inputs/下行计划时刻表.xlsx
+  mileage_path: inputs/区间里程.xlsx
+  timetable_sheet_name: Sheet1
+  mileage_sheet_name: Sheet1
+
+solver:
+  objective_delay_weight: 1.0
+  objective_mode: abs
+  arr_arr_headway_seconds: 180
+  dep_dep_headway_seconds: 180
+  dwell_seconds_at_stops: 120
+  big_m: 100000
+  tolerance_delay_seconds: 7200
+
+scenarios:
+  delays: []
+  speed_limits: []
+  interruptions: []
+
+build:
+  lp_path: outputs/test_plot_original/test_plot_original.lp
+
+solve:
+  lp_path: outputs/test_plot_original/test_plot_original.lp
+  solution_path: outputs/test_plot_original/test_plot_original.sol
+
+export_timetable:
+  solution_path: outputs/test_plot_original/test_plot_original.sol
+  timetable_path: outputs/test_plot_original/test_plot_original_adjusted_timetable.xlsx
+
+analyze:
+  enable_metrics: false
+  enable_plot: true
+  plan_timetable_path: inputs/下行计划时刻表.xlsx
+  adjusted_timetable_path: inputs/下行计划时刻表.xlsx
+  metrics_output_path: outputs/test_plot_original/test_plot_original_metrics.xlsx
+  plot_timetable_path: inputs/下行计划时刻表.xlsx
+  plot_output_path: outputs/test_plot_original/test_plot_original_plot.png

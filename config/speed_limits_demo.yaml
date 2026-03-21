@@ -1,14 +1,29 @@
 project:
   name: speed_limits_demo
   output_dir: outputs/speed_limits_demo
-
-input:
   timetable_path: inputs/下行计划时刻表.xlsx
   mileage_path: inputs/区间里程.xlsx
   timetable_sheet_name: Sheet1
   mileage_sheet_name: Sheet1
 
-solver:
+build:
+  scenarios:
+    delays: []
+    speed_limits:
+      - start_station: jinanxi
+        end_station: taian
+        extra_seconds: 300
+        start_time: "08:00:00"
+        end_time: "10:00:00"
+      - start_station: qufudong
+        end_station: tengzhoudong
+        extra_seconds: 180
+        start_time: "09:30:00"
+        end_time: "11:30:00"
+    interruptions: []
+
+solve:
+  lp_path: ""
   objective_delay_weight: 1.0
   objective_mode: abs
   arr_arr_headway_seconds: 180
@@ -17,23 +32,13 @@ solver:
   big_m: 100000
   tolerance_delay_seconds: 7200
 
-scenarios:
-  delays: []
-  speed_limits:
-    - start_station: jinanxi
-      end_station: taian
-      extra_seconds: 300
-      start_time: "08:00:00"
-      end_time: "10:00:00"
-    - start_station: qufudong
-      end_station: tengzhoudong
-      extra_seconds: 180
-      start_time: "09:30:00"
-      end_time: "11:30:00"
-  interruptions: []
+export-timetable:
+  sol_path: ""
 
 analyze:
   enable_metrics: true
   enable_plot: true
   plot_grid: true
   plot_title: Train Timetable - Speed Limits Demo
+  adj_timetable_path: ""
+  adj_timetable_sheet_name: Sheet1

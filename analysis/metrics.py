@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Dict
@@ -15,9 +15,15 @@ def _time_to_seconds(value: str | None) -> float:
     return float(hour * 3600 + minute * 60 + second)
 
 
-def analyze_timetable(plan_path: Path, adjusted_path: Path, output_path: Path) -> Path:
-    plan_df = read_timetable(plan_path)
-    adjusted_df = read_timetable(adjusted_path)
+def analyze_timetable(
+    plan_path: Path,
+    adjusted_path: Path,
+    output_path: Path,
+    plan_sheet_name: str = "Sheet1",
+    adjusted_sheet_name: str = "Sheet1",
+) -> Path:
+    plan_df = read_timetable(plan_path, sheet_name=plan_sheet_name)
+    adjusted_df = read_timetable(adjusted_path, sheet_name=adjusted_sheet_name)
 
     for df in (plan_df, adjusted_df):
         df["arrival_sec"] = df["arrival_time"].apply(_time_to_seconds)
@@ -92,3 +98,4 @@ def analyze_timetable(plan_path: Path, adjusted_path: Path, output_path: Path) -
         )
 
     return output_path
+

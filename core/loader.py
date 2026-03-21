@@ -125,27 +125,106 @@ def _parse_time_to_seconds(value: Any) -> int:
     return hour * 3600 + minute * 60 + second
 
 
+def _path_or_default(value: Any, default: Path) -> Path:
+    if value is None:
+        return default
+    text = str(value).strip()
+    if text == "":
+        return default
+    return Path(text)
+
+
+def _str_or_default(value: Any, default: str) -> str:
+    if value is None:
+        return default
+    text = str(value).strip()
+    return text or default
+
+
+def _required_path(value: Any, field_name: str) -> Path:
+    if value is None:
+        raise ValueError(f"Missing required config field: {field_name}")
+    text = str(value).strip()
+    if text == "":
+        raise ValueError(f"Missing required config field: {field_name}")
+    return Path(text)
+
+
 def load_config(path: Path) -> AppConfig:
     yaml = _require_yaml()
     with path.open("r", encoding="utf-8") as file:
         payload = yaml.safe_load(file) or {}
 
-    input_cfg = payload.get("input", {})
-    solver_cfg = payload.get("solver", {})
-    scenarios_cfg = payload.get("scenarios", {})
-    project_cfg = payload.get("project", {})
-    analyze_cfg = payload.get("analyze", payload.get("analysis", {}))
+    project_cfg = payload.get("project", {}) or {}
+    build_cfg = payload.get("build", {}) or {}
+    solve_cfg = payload.get("solve", {}) or {}
+    export_cfg = payload.get("export-timetable", payload.get("export_timetable", {})) or {}
+    analyze_cfg = payload.get("analyze", payload.get("analysis", {})) or {}
 
-    case_name = str(project_cfg.get("name", path.stem)).strip() or path.stem
-    output_dir = Path(str(project_cfg.get("output_dir", Path("outputs") / case_name)))
+    # Backward-compatible sections.
+    input_cfg = payload.get("input", {}) or {}
+    root_solver_cfg = payload.get("solver", {}) or {}
+    root_scenarios_cfg = payload.get("scenarios", {}) or {}
 
-    # Fixed pipeline artifact paths under project.output_dir.
-    # The config no longer needs to specify per-stage IO paths.
-    lp_path = output_dir / "model.lp"
-    solution_path = output_dir / "solution.sol"
-    adjusted_timetable_path = output_dir / "adjusted_timetable.xlsx"
-    metrics_output_path = output_dir / "analysis_metrics.xlsx"
-    plot_output_path = output_dir / "timetable_plot.png"
+    case_name = _str_or_default(project_cfg.get("name"), path.stem)
+    output_dir = _path_or_default(project_cfg.get("output_dir"), Path("outputs") / case_name)
+
+    # Convention-first artifact paths.
+    # build output: output_dir/<name>.lp
+    # solve output: output_dir/<name>.sol
+    # export output: output_dir/adjusted_timetable.xlsx
+    lp_default_path = output_dir / f"{case_name}.lp"
+    solution_default_path = output_dir / f"{case_name}.sol"
+    adjusted_default_path = output_dir / "adjusted_timetable.xlsx"
+    metrics_default_path = output_dir / "analysis_metrics.xlsx"
+    plot_default_path = output_dir / "timetable_plot.png"
+
+    # project holds base input info in new schema; fall back to legacy input section.
+    timetable_path = _required_path(
+        project_cfg.get("timetable_path", input_cfg.get("timetable_path")),
+        "project.timetable_path (or legacy input.timetable_path)",
+    )
+    mileage_path = _required_path(
+        project_cfg.get("mileage_path", input_cfg.get("mileage_path")),
+        "project.mileage_path (or legacy input.mileage_path)",
+    )
+    timetable_sheet_name = _str_or_default(
+        project_cfg.get("timetable_sheet_name", input_cfg.get("timetable_sheet_name")),
+        "Sheet1",
+    )
+    mileage_sheet_name = _str_or_default(
+        project_cfg.get("mileage_sheet_name", input_cfg.get("mileage_sheet_name")),
+        "Sheet1",
+    )
+
+    # build reads build.scenarios first, then fallback to legacy top-level scenarios.
+    scenarios_cfg = build_cfg.get("scenarios", root_scenarios_cfg) or {}
+
+    solve_solver_cfg = solve_cfg.get("solver", {}) or {}
+
+    def _solve_value(key: str, default: Any) -> Any:
+        if key in solve_cfg:
+            return solve_cfg[key]
+        if key in solve_solver_cfg:
+            return solve_solver_cfg[key]
+        return root_solver_cfg.get(key, default)
+
+    solve_lp_path = _path_or_default(solve_cfg.get("lp_path"), lp_default_path)
+    export_solution_path = _path_or_default(
+        export_cfg.get("sol_path", export_cfg.get("solution_path")),
+        solution_default_path,
+    )
+
+    adjusted_timetable_path = _path_or_default(
+        analyze_cfg.get("adj_timetable_path", analyze_cfg.get("adjusted_timetable_path")),
+        adjusted_default_path,
+    )
+    adjusted_timetable_sheet_name = _str_or_default(
+        analyze_cfg.get("adj_timetable_sheet_name", analyze_cfg.get("adjusted_timetable_sheet_name")),
+        "Sheet1",
+    )
+    metrics_output_path = _path_or_default(analyze_cfg.get("metrics_output_path"), metrics_default_path)
+    plot_output_path = _path_or_default(analyze_cfg.get("plot_output_path"), plot_default_path)
 
     delays = [
         DelayScenario(
@@ -179,38 +258,40 @@ def load_config(path: Path) -> AppConfig:
     return AppConfig(
         project=ProjectConfig(name=case_name, output_dir=output_dir),
         input=InputConfig(
-            timetable_path=Path(str(input_cfg.get("timetable_path", ""))),
-            mileage_path=Path(str(input_cfg.get("mileage_path", ""))),
-            timetable_sheet_name=str(input_cfg.get("timetable_sheet_name", "Sheet1")),
-            mileage_sheet_name=str(input_cfg.get("mileage_sheet_name", "Sheet1")),
+            timetable_path=timetable_path,
+            mileage_path=mileage_path,
+            timetable_sheet_name=timetable_sheet_name,
+            mileage_sheet_name=mileage_sheet_name,
         ),
         solver=SolverConfig(
-            objective_delay_weight=float(solver_cfg.get("objective_delay_weight", 1.0)),
-            objective_mode=str(solver_cfg.get("objective_mode", "abs")),
-            arr_arr_headway_seconds=int(solver_cfg.get("arr_arr_headway_seconds", 180)),
-            dep_dep_headway_seconds=int(solver_cfg.get("dep_dep_headway_seconds", 180)),
-            dwell_seconds_at_stops=int(solver_cfg.get("dwell_seconds_at_stops", 120)),
-            big_m=int(solver_cfg.get("big_m", 100000)),
-            tolerance_delay_seconds=int(solver_cfg.get("tolerance_delay_seconds", 2 * 3600)),
+            objective_delay_weight=float(_solve_value("objective_delay_weight", 1.0)),
+            objective_mode=str(_solve_value("objective_mode", "abs")),
+            arr_arr_headway_seconds=int(_solve_value("arr_arr_headway_seconds", 180)),
+            dep_dep_headway_seconds=int(_solve_value("dep_dep_headway_seconds", 180)),
+            dwell_seconds_at_stops=int(_solve_value("dwell_seconds_at_stops", 120)),
+            big_m=int(_solve_value("big_m", 100000)),
+            tolerance_delay_seconds=int(_solve_value("tolerance_delay_seconds", 2 * 3600)),
         ),
         scenarios=ScenarioConfig(
             delays=delays,
             speed_limits=speed_limits,
             interruptions=interruptions,
         ),
-        build=BuildConfig(lp_path=lp_path),
-        solve=SolveConfig(lp_path=lp_path, solution_path=solution_path),
+        build=BuildConfig(lp_path=lp_default_path),
+        solve=SolveConfig(lp_path=solve_lp_path, solution_path=solution_default_path),
         export_timetable=ExportTimetableConfig(
-            solution_path=solution_path,
-            timetable_path=adjusted_timetable_path,
+            solution_path=export_solution_path,
+            timetable_path=adjusted_default_path,
         ),
         analyze=AnalyzeConfig(
             enable_metrics=bool(analyze_cfg.get("enable_metrics", False)),
             enable_plot=bool(analyze_cfg.get("enable_plot", False)),
             plot_grid=bool(analyze_cfg.get("plot_grid", False)),
             plot_title=str(analyze_cfg.get("plot_title", "Train Timetable")),
-            plan_timetable_path=Path(str(input_cfg.get("timetable_path", ""))),
+            plan_timetable_path=timetable_path,
+            plan_timetable_sheet_name=timetable_sheet_name,
             adjusted_timetable_path=adjusted_timetable_path,
+            adjusted_timetable_sheet_name=adjusted_timetable_sheet_name,
             metrics_output_path=metrics_output_path,
             plot_output_path=plot_output_path,
             plot_timetable_path=adjusted_timetable_path,
@@ -224,3 +305,5 @@ def load_timetable(path: Path, sheet_name: str) -> RawTable:
 
 def load_mileage_table(path: Path, sheet_name: str) -> RawTable:
     return _read_excel(path, sheet_name)
+
+

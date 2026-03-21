@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 
@@ -8,8 +8,8 @@ import pandas as pd
 from matplotlib.dates import DateFormatter
 
 
-def _read_and_format(path: Path) -> pd.DataFrame:
-    df = pd.read_excel(path, engine="openpyxl")
+def _read_and_format(path: Path, sheet_name: str = "Sheet1") -> pd.DataFrame:
+    df = pd.read_excel(path, sheet_name=sheet_name, engine="openpyxl")
     required = ["train_ID", "station", "arrival_time", "departure_time"]
     if not all(col in df.columns for col in required) and "train_id" in df.columns:
         df = df.rename(columns={"train_id": "train_ID"})
@@ -44,10 +44,11 @@ def plot_timetable(
     output_path: Path,
     show_grid: bool = False,
     title: str = "Train Timetable",
+    sheet_name: str = "Sheet1",
 ) -> Path:
     plt.rcParams["axes.unicode_minus"] = False
 
-    df = _read_and_format(file_path)
+    df = _read_and_format(file_path, sheet_name=sheet_name)
     df = df.sort_values(["train_ID", "arrival_time", "departure_time", "station"])
 
     stations = df["station"].drop_duplicates().tolist()
@@ -106,3 +107,4 @@ def plot_timetable(
     plt.savefig(output_path, dpi=500)
     plt.close()
     return output_path
+

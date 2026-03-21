@@ -73,7 +73,9 @@ class AnalyzeConfig:
     plot_grid: bool
     plot_title: str
     plan_timetable_path: Path
+    plan_timetable_sheet_name: str
     adjusted_timetable_path: Path
+    adjusted_timetable_sheet_name: str
     metrics_output_path: Path
     plot_output_path: Path
     plot_timetable_path: Path

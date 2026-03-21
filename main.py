@@ -68,6 +68,8 @@ def cmd_analyze(config_path: Path) -> int:
             config.analyze.plan_timetable_path,
             config.analyze.adjusted_timetable_path,
             config.analyze.metrics_output_path,
+            plan_sheet_name=config.analyze.plan_timetable_sheet_name,
+            adjusted_sheet_name=config.analyze.adjusted_timetable_sheet_name,
         )
         print(f"Metrics exported: {metrics_path}")
 
@@ -79,6 +81,7 @@ def cmd_analyze(config_path: Path) -> int:
             config.analyze.plot_output_path,
             show_grid=config.analyze.plot_grid,
             title=config.analyze.plot_title,
+            sheet_name=config.analyze.adjusted_timetable_sheet_name,
         )
         print(f"Plot exported: {plot_path}")
     return 0
@@ -94,7 +97,7 @@ def cmd_run(config_path: Path) -> int:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="RailGraph2Gurobi command line.")
-    parser.add_argument("--config", default="config/demo.yaml", help="Path to YAML configuration file.")
+    parser.add_argument("--config", default="config/mixed_scenarios_demo.yaml", help="Path to YAML configuration file.")
     sub = parser.add_subparsers(dest="command")
 
     def _add_config_arg(p: argparse.ArgumentParser) -> None:
@@ -121,7 +124,7 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = parse_args()
-    config_value = getattr(args, "config", "config/demo.yaml")
+    config_value = getattr(args, "config", "config/mixed_scenarios_demo.yaml")
     config_path = Path(config_value)
     try:
         if args.command == "build":
@@ -136,3 +139,4 @@ if __name__ == "__main__":
     except Exception as exc:  # pragma: no cover
         print(f"Pipeline failed: {exc}", file=sys.stderr)
         raise SystemExit(1)
+

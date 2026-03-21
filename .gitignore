@@ -46,4 +46,10 @@ outputs/
 # Optional local data dumps/logs
 *.log
 *.tmp
+
+# Test files
 test/
+tests/
+test_*.py
+*_test.py
+*.test.py

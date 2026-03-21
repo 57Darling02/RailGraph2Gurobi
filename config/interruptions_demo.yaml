@@ -1,0 +1,37 @@
+project:
+  name: interruptions_demo
+  output_dir: outputs/interruptions_demo
+
+input:
+  timetable_path: inputs/下行计划时刻表.xlsx
+  mileage_path: inputs/区间里程.xlsx
+  timetable_sheet_name: Sheet1
+  mileage_sheet_name: Sheet1
+
+solver:
+  objective_delay_weight: 1.0
+  objective_mode: abs
+  arr_arr_headway_seconds: 180
+  dep_dep_headway_seconds: 180
+  dwell_seconds_at_stops: 120
+  big_m: 100000
+  tolerance_delay_seconds: 7200
+
+scenarios:
+  delays: []
+  speed_limits: []
+  interruptions:
+    - start_station: taian
+      end_station: qufudong
+      start_time: "09:00:00"
+      end_time: "09:40:00"
+    - start_station: zaozhuang
+      end_station: xuzhoudong
+      start_time: "10:50:00"
+      end_time: "11:20:00"
+
+analyze:
+  enable_metrics: true
+  enable_plot: true
+  plot_grid: true
+  plot_title: Train Timetable - Interruptions Demo

@@ -248,4 +248,11 @@ scenarios:
 python -m unittest tests/test_input_normalization.py
 ```
 
+批量生成并验证转换器样例库（700个）：
+
+```powershell
+python scripts/generate_case_library.py --clean
+python -m unittest tests/test_translator_bulk.py
+```
+
 如果你要新增约束模块，入口在 `constraints/registry.py`。

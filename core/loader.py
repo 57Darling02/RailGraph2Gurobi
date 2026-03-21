@@ -100,8 +100,23 @@ def _read_excel(path: Path, sheet_name: str) -> RawTable:
     return RawTable(headers=headers, rows=records)
 
 
-def _parse_time_to_seconds(value: str) -> int:
-    parts = value.split(":")
+def _parse_time_to_seconds(value: Any) -> int:
+    # YAML may parse unquoted "HH:MM:SS" into a numeric scalar (e.g. 08:00:00 -> 28800).
+    # Support both explicit "HH:MM:SS" strings and numeric seconds.
+    if isinstance(value, (int, float)):
+        seconds = int(value)
+        if seconds < 0 or seconds > 24 * 3600 - 1:
+            raise ValueError(f"Invalid HH:MM:SS time: {value}")
+        return seconds
+
+    text = str(value).strip()
+    if text.isdigit():
+        seconds = int(text)
+        if seconds < 0 or seconds > 24 * 3600 - 1:
+            raise ValueError(f"Invalid HH:MM:SS time: {value}")
+        return seconds
+
+    parts = text.split(":")
     if len(parts) != 3:
         raise ValueError(f"Invalid HH:MM:SS time: {value}")
     hour, minute, second = [int(part) for part in parts]
@@ -146,8 +161,8 @@ def load_config(path: Path) -> AppConfig:
             start_station=str(item["start_station"]).strip(),
             end_station=str(item["end_station"]).strip(),
             extra_seconds=int(item["extra_seconds"]),
-            start_time=_parse_time_to_seconds(str(item["start_time"]).strip()),
-            end_time=_parse_time_to_seconds(str(item["end_time"]).strip()),
+            start_time=_parse_time_to_seconds(item["start_time"]),
+            end_time=_parse_time_to_seconds(item["end_time"]),
         )
         for item in scenarios_cfg.get("speed_limits", [])
     ]
@@ -155,8 +170,8 @@ def load_config(path: Path) -> AppConfig:
         InterruptionScenario(
             start_station=str(item["start_station"]).strip(),
             end_station=str(item["end_station"]).strip(),
-            start_time=_parse_time_to_seconds(str(item["start_time"]).strip()),
-            end_time=_parse_time_to_seconds(str(item["end_time"]).strip()),
+            start_time=_parse_time_to_seconds(item["start_time"]),
+            end_time=_parse_time_to_seconds(item["end_time"]),
         )
         for item in scenarios_cfg.get("interruptions", [])
     ]

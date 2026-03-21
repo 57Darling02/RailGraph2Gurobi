@@ -46,3 +46,4 @@ outputs/
 # Optional local data dumps/logs
 *.log
 *.tmp
+test/

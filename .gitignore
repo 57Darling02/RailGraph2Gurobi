@@ -53,3 +53,4 @@ tests/
 test_*.py
 *_test.py
 *.test.py
+docs/

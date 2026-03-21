@@ -1,4 +1,4 @@
-# RailGraph2Gurobi
+﻿# RailGraph2Gurobi
 
 RailGraph2Gurobi provides a clean 4-stage workflow:
 
@@ -103,45 +103,94 @@ Mileage first 2 columns must be:
 station | mileage
 ```
 
-## Batch Regression Case Generation (700 cases)
+## Batch Case Config Generation (700 cases)
 
 ```powershell
-python scripts/generate_case_library.py --clean
-python -m unittest tests/test_translator_bulk.py
+python scripts/case_library_builder.py --output-root tests/case_library --project-output-root outputs/case_library --clean
 ```
 
-Default distribution:
+This command generates config files only (`caseXXXX.yaml`) and keeps the same distribution logic:
 
 - delay: 100
 - speedlimit: 100
 - disruption: 100
 - combo: 400 (4 combo types * 100 each)
 
-Optional env vars:
+Then you can connect these configs to the main pipeline stages (`build/solve/export-timetable/analyze`) in batch.
 
-- `RAIL_CASE_ROOT`: case root dir (default `tests/case_library`)
-- `RAIL_CASE_LIMIT`: run first N cases only
-- `RAIL_ENABLE_MAIN_RUN=1`: also run end-to-end `main.py run`
-- `RAIL_MAIN_RUN_LIMIT`: max cases for end-to-end run (default 5)
-
-## Batch Analyze Existing `.sol`
+Batch build from generated configs:
 
 ```powershell
-python scripts/batch_solution_analyze.py --solutions-root tests/solutions --base-config tests/test.yaml
+python scripts/bench_build.py --config-root tests/case_library
 ```
 
-This script will:
+Batch solve from generated configs:
 
-- recursively scan `tests/solutions/**/*.sol`
-- auto-generate one config per `.sol`
-- run `export-timetable + analyze`
-- aggregate:
-  - `outputs/solutions_batch/summary.csv`
-  - `outputs/solutions_batch/summary.json`
+```powershell
+python scripts/bench_solve.py --config-root tests/case_library
+```
 
+Batch export-timetable from generated configs:
+
+```powershell
+python scripts/bench_export_timetable.py --config-root tests/case_library
+```
+
+Batch analyze from generated configs:
+
+```powershell
+python scripts/bench_analyze.py --config-root tests/case_library
+```
+
+## Import External `.sol` Into Standard Pipeline
+
+Step 1: import external `.sol` files into standardized config/output layout:
+
+```powershell
+python scripts/import_solutions.py --solutions-root tests/solutions --base-config tests/test.yaml --generated-config-root tests/generated_configs --output-root outputs/solutions_import
+```
+
+Step 2: run export-timetable on imported cases:
+
+```powershell
+python scripts/bench_export_timetable.py --config-root tests/generated_configs
+```
+
+Step 3: run analyze on imported cases:
+
+```powershell
+python scripts/bench_analyze.py --config-root tests/generated_configs
+```
+
+## Import External `.lp` Into Standard Pipeline
+
+Step 1: import external `.lp` files into standardized config/output layout:
+
+```powershell
+python scripts/import_lp.py --lp-root tests/lp --base-config tests/test.yaml --generated-config-root tests/generated_configs_lp --output-root outputs/lp_import
+```
+
+Step 2: run solve on imported cases:
+
+```powershell
+python scripts/bench_solve.py --config-root tests/generated_configs_lp
+```
+
+Step 3: continue with export-timetable and analyze if needed:
+
+```powershell
+python scripts/bench_export_timetable.py --config-root tests/generated_configs_lp
+python scripts/bench_analyze.py --config-root tests/generated_configs_lp
+```
 ## Common Errors
 
 - `No module named core`: run commands from repository root.
 - `Missing dependency`: install `pyyaml/openpyxl/pandas/matplotlib/gurobipy`.
 - `No stations found for plotting`: set `analyze.enable_plot=false`.
 - `Missing required config field: project.timetable_path`: fill required `project` input fields.
+
+
+
+
+
+

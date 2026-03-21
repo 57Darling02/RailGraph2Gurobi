@@ -12,7 +12,7 @@ from typing import Dict, List, Sequence, Tuple
 
 
 # Ensure `core` package is importable when running:
-#   python scripts/generate_case_library.py
+#   imported by scripts/case_library_builder.py
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -631,6 +631,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 

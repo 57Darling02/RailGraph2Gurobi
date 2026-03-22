@@ -48,7 +48,7 @@ def apply_base_constraints(ctx: BuildContext) -> None:
             rhs=0.0,
         )
 
-        if ctx.config.solver.objective_mode == "delay":
+        if ctx.config.solver.objective_mode == "delay" and not ctx.config.solver.cancellation_enabled:
             ctx.model.add_objective_term(d_var, ctx.config.solver.objective_delay_weight)
 
     for train_id, route in ctx.translated.train_routes.items():

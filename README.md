@@ -47,11 +47,13 @@ solve:
   lp_path: ""
   objective_delay_weight: 1.0
   objective_mode: abs
+  cancellation_enabled: false
+  cancellation_penalty_weight: 1000.0
   arr_arr_headway_seconds: 180
   dep_dep_headway_seconds: 180
   dwell_seconds_at_stops: 120
   big_m: 100000
-  tolerance_delay_seconds: 7200
+  cancellation_threshold_seconds: 7200
 
 export-timetable:
   sol_path: ""
@@ -73,6 +75,11 @@ analyze:
 
 - `solve`
   - reads: `solve.*`
+  - `objective_mode` supports: `delay` / `abs`
+  - cancellation is independent of `objective_mode`, controlled by:
+    - `solve.cancellation_enabled`
+    - `solve.cancellation_penalty_weight`
+    - `solve.cancellation_threshold_seconds` (or `tolerance_delay_seconds`)
   - LP input: `solve.lp_path` if non-empty, otherwise `{output_dir}/{name}.lp`
   - outputs: `{output_dir}/{name}.sol`
 
@@ -163,7 +170,7 @@ python scripts/bench_analyze.py --config-root tests/case_library
 Step 1: import external `.sol` files into standardized config/output layout:
 
 ```powershell
-python scripts/import_solutions.py --solutions-root tests/solutions --base-config tests/test.yaml --generated-config-root tests/generated_configs --output-root outputs/solutions_import
+python scripts/import_solutions.py --solutions-root tests/solutions --base-config config/base_demo.yaml --generated-config-root tests/generated_configs --output-root outputs/solutions_import
 ```
 
 Step 2: run export-timetable on imported cases:
@@ -183,7 +190,7 @@ python scripts/bench_analyze.py --config-root tests/generated_configs
 Step 1: import external `.lp` files into standardized config/output layout:
 
 ```powershell
-python scripts/import_lp.py --lp-root tests/lp --base-config tests/test.yaml --generated-config-root tests/generated_configs_lp --output-root outputs/lp_import
+python scripts/import_lp.py --lp-root tests/lp --base-config config/base_demo.yaml --generated-config-root tests/generated_configs_lp --output-root outputs/lp_import
 ```
 
 Step 2: run solve on imported cases:
@@ -204,6 +211,7 @@ python scripts/bench_analyze.py --config-root tests/generated_configs_lp
 - `Missing dependency`: install `pyyaml/openpyxl/pandas/matplotlib/gurobipy`.
 - `No stations found for plotting`: set `analyze.enable_plot=false`.
 - `Missing required config field: project.timetable_path`: fill required `project` input fields.
+
 
 
 

@@ -31,7 +31,7 @@ def _parse_args() -> argparse.Namespace:
         description="Import external .lp files into standardized case yaml + output layout."
     )
     parser.add_argument("--lp-root", default="tests/lp", help="Root folder containing *.lp files.")
-    parser.add_argument("--base-config", default="tests/test.yaml", help="Template config used as base.")
+    parser.add_argument("--base-config", default="config/base_demo.yaml", help="Template config used as base.")
     parser.add_argument("--generated-config-root", default="tests/generated_configs_lp", help="Generated yaml root.")
     parser.add_argument("--output-root", default="outputs/lp_import", help="Per-case output root.")
     parser.add_argument("--summary-csv", default="outputs/lp_import/import_lp_summary.csv", help="Import summary CSV.")
@@ -238,3 +238,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

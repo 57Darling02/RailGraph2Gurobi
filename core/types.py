@@ -85,6 +85,8 @@ class AnalyzeConfig:
 class SolverConfig:
     objective_delay_weight: float
     objective_mode: str
+    cancellation_enabled: bool
+    cancellation_penalty_weight: float
     arr_arr_headway_seconds: int
     dep_dep_headway_seconds: int
     dwell_seconds_at_stops: int

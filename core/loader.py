@@ -141,6 +141,19 @@ def _str_or_default(value: Any, default: str) -> str:
     return text or default
 
 
+def _bool_or_default(value: Any, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "y", "on"}:
+        return True
+    if text in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
+
+
 def _required_path(value: Any, field_name: str) -> Path:
     if value is None:
         raise ValueError(f"Missing required config field: {field_name}")
@@ -255,6 +268,15 @@ def load_config(path: Path) -> AppConfig:
         for item in scenarios_cfg.get("interruptions", [])
     ]
 
+    objective_mode_raw = str(_solve_value("objective_mode", "abs")).strip()
+    cancellation_default = False
+    objective_mode = objective_mode_raw
+    if objective_mode_raw == "cal_delay_plus_cancel":
+        # Compatibility alias: old mixed mode now maps to
+        # abs objective + independent cancellation switch.
+        objective_mode = "abs"
+        cancellation_default = True
+
     return AppConfig(
         project=ProjectConfig(name=case_name, output_dir=output_dir),
         input=InputConfig(
@@ -265,12 +287,24 @@ def load_config(path: Path) -> AppConfig:
         ),
         solver=SolverConfig(
             objective_delay_weight=float(_solve_value("objective_delay_weight", 1.0)),
-            objective_mode=str(_solve_value("objective_mode", "abs")),
+            objective_mode=objective_mode,
+            cancellation_enabled=_bool_or_default(
+                _solve_value("cancellation_enabled", cancellation_default),
+                cancellation_default,
+            ),
+            cancellation_penalty_weight=float(
+                _solve_value("cancellation_penalty_weight", 1000.0)
+            ),
             arr_arr_headway_seconds=int(_solve_value("arr_arr_headway_seconds", 180)),
             dep_dep_headway_seconds=int(_solve_value("dep_dep_headway_seconds", 180)),
             dwell_seconds_at_stops=int(_solve_value("dwell_seconds_at_stops", 120)),
             big_m=int(_solve_value("big_m", 100000)),
-            tolerance_delay_seconds=int(_solve_value("tolerance_delay_seconds", 2 * 3600)),
+            tolerance_delay_seconds=int(
+                _solve_value(
+                    "cancellation_threshold_seconds",
+                    _solve_value("tolerance_delay_seconds", 2 * 3600),
+                )
+            ),
         ),
         scenarios=ScenarioConfig(
             delays=delays,

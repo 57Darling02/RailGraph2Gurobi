@@ -56,12 +56,12 @@ COMBO_TYPES = [
 ]
 
 DEFAULT_BASE_CONFIG_CANDIDATES = [
+    Path("config/base_demo.yaml"),
     Path("config/mixed_scenarios_demo.yaml"),
     Path("config/delays_demo.yaml"),
     Path("config/speed_limits_demo.yaml"),
     Path("config/interruptions_demo.yaml"),
 ]
-
 
 
 @dataclass(frozen=True)
@@ -300,6 +300,8 @@ def base_config_payload(case_name: str, output_dir: str, base: BaseData) -> Dict
             "lp_path": "",
             "objective_delay_weight": cfg.solver.objective_delay_weight,
             "objective_mode": cfg.solver.objective_mode,
+            "cancellation_enabled": cfg.solver.cancellation_enabled,
+            "cancellation_penalty_weight": cfg.solver.cancellation_penalty_weight,
             "arr_arr_headway_seconds": cfg.solver.arr_arr_headway_seconds,
             "dep_dep_headway_seconds": cfg.solver.dep_dep_headway_seconds,
             "dwell_seconds_at_stops": cfg.solver.dwell_seconds_at_stops,
@@ -631,7 +633,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 
 
 

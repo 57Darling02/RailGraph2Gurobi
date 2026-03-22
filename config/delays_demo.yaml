@@ -1,4 +1,4 @@
-﻿project:
+project:
   name: delays_demo
   output_dir: outputs/delays_demo
   timetable_path: inputs/下行计划时刻表.xlsx
@@ -20,6 +20,8 @@ solve:
   lp_path: ""
   objective_delay_weight: 1.0
   objective_mode: abs
+  cancellation_enabled: false
+  cancellation_penalty_weight: 1000.0
   arr_arr_headway_seconds: 180
   dep_dep_headway_seconds: 180
   dwell_seconds_at_stops: 120
@@ -36,3 +38,4 @@ analyze:
   plot_title: Train Timetable - Delays Demo
   adj_timetable_path: ""
   adj_timetable_sheet_name: Sheet1
+

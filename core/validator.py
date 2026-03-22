@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import re
 from collections import defaultdict
@@ -194,10 +194,12 @@ def _validate_scenarios(config: AppConfig, timetable_rows: List[TimetableRow], m
 
 
 def _validate_solver(config: AppConfig) -> None:
-    if config.solver.objective_mode not in {"delay", "abs", "cal_delay_plus_cancel"}:
+    if config.solver.objective_mode not in {"delay", "abs"}:
         raise ValueError(
-            "solver.objective_mode must be one of: delay, abs, cal_delay_plus_cancel"
+            "solver.objective_mode must be one of: delay, abs"
         )
+    if config.solver.cancellation_penalty_weight < 0:
+        raise ValueError("solver.cancellation_penalty_weight must be >= 0")
     if config.solver.arr_arr_headway_seconds < 0:
         raise ValueError("solver.arr_arr_headway_seconds must be >= 0")
     if config.solver.dep_dep_headway_seconds < 0:

@@ -40,6 +40,18 @@ def parse_args() -> argparse.Namespace:
         help="Only process first N configs (0 = all).",
     )
     parser.add_argument(
+        "--start-index",
+        type=int,
+        default=1,
+        help="1-based start index in the sorted config list (inclusive).",
+    )
+    parser.add_argument(
+        "--end-index",
+        type=int,
+        default=0,
+        help="1-based end index in the sorted config list (inclusive, 0 = no upper bound).",
+    )
+    parser.add_argument(
         "--stop-on-error",
         action="store_true",
         help="Stop immediately when one config fails.",
@@ -68,10 +80,29 @@ def _to_posix(path_value: Path) -> str:
     return str(path_value).replace("\\", "/")
 
 
-def _collect_configs(config_root: Path, pattern: str, limit: int) -> List[Path]:
+def _collect_configs(
+    config_root: Path,
+    pattern: str,
+    start_index: int,
+    end_index: int,
+    limit: int,
+) -> List[Path]:
     if not config_root.exists():
         raise FileNotFoundError(f"config root not found: {config_root}")
-    configs = sorted(path for path in config_root.glob(pattern) if path.is_file())
+
+    if start_index < 1:
+        raise ValueError("start-index must be >= 1")
+    if end_index < 0:
+        raise ValueError("end-index must be >= 0")
+    if end_index > 0 and end_index < start_index:
+        raise ValueError("end-index must be >= start-index when end-index > 0")
+
+    all_configs = sorted(path for path in config_root.glob(pattern) if path.is_file())
+
+    start_pos = start_index - 1
+    end_pos = end_index if end_index > 0 else None
+    configs = all_configs[start_pos:end_pos]
+
     if limit > 0:
         configs = configs[:limit]
     return configs
@@ -101,12 +132,23 @@ def main() -> None:
     summary_csv = _resolve_path(args.summary_csv)
     summary_json = _resolve_path(args.summary_json)
 
-    configs = _collect_configs(config_root, args.glob, args.limit)
-    print(f"Found configs: {len(configs)}")
+    configs = _collect_configs(
+        config_root=config_root,
+        pattern=args.glob,
+        start_index=args.start_index,
+        end_index=args.end_index,
+        limit=args.limit,
+    )
+    print(
+        "Found configs: "
+        f"{len(configs)} "
+        f"(start-index={args.start_index}, end-index={args.end_index or 'all'}, limit={args.limit})"
+    )
 
     records: List[Dict[str, object]] = []
 
-    for idx, config_path in enumerate(configs, start=1):
+    for offset, config_path in enumerate(configs, start=0):
+        idx = args.start_index + offset
         time.sleep(0.2)
         start = time.perf_counter()
         record: Dict[str, object] = {
@@ -150,8 +192,8 @@ def main() -> None:
         records.append(record)
 
         print(
-            f"[{idx}/{len(configs)}] {record['status']} | "
-            f"{record['case_id']} | {record['duration_sec']}s"
+            f"[{offset + 1}/{len(configs)}|global#{idx}] "
+            f"{record['status']} | {record['case_id']} | {record['duration_sec']}s"
         )
         if record["status"] == "failed":
             print(f"    reason: {record['error']}", file=sys.stderr)
@@ -169,6 +211,8 @@ def main() -> None:
         "config_root": _to_posix(config_root),
         "glob": args.glob,
         "limit": args.limit,
+        "start_index": args.start_index,
+        "end_index": args.end_index,
         "total": len(records),
         "status_counts": status_counts,
         "summary_csv": _to_posix(summary_csv),
@@ -194,8 +238,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-
-
-

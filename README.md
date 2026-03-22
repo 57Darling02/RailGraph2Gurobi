@@ -130,6 +130,22 @@ Batch solve from generated configs:
 python scripts/bench_solve.py --config-root tests/case_library
 ```
 
+Resume solve from a specific index range (1-based, inclusive):
+
+```powershell
+# solve from case #201 to the end
+python scripts/bench_solve.py --config-root tests/case_library --start-index 201
+
+# solve only case #201 ~ #400
+python scripts/bench_solve.py --config-root tests/case_library --start-index 201 --end-index 400
+```
+
+`bench_solve.py` range-related options:
+
+- `--start-index`: 1-based start index (default: `1`)
+- `--end-index`: 1-based end index, inclusive (default: `0`, means no upper bound)
+- `--limit`: applies after range slicing
+
 Batch export-timetable from generated configs:
 
 ```powershell
@@ -188,6 +204,7 @@ python scripts/bench_analyze.py --config-root tests/generated_configs_lp
 - `Missing dependency`: install `pyyaml/openpyxl/pandas/matplotlib/gurobipy`.
 - `No stations found for plotting`: set `analyze.enable_plot=false`.
 - `Missing required config field: project.timetable_path`: fill required `project` input fields.
+
 
 
 

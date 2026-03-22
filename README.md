@@ -113,7 +113,7 @@ station | mileage
 ## Batch Case Config Generation (700 cases)
 
 ```powershell
-python scripts/case_library_builder.py --output-root tests/case_library --project-output-root outputs/case_library --clean
+python -u scripts/case_library_builder.py --output-root tests/case_library --project-output-root outputs/case_library --clean > outputs/case_library_builder.log 2>&1
 ```
 
 This command generates config files only (`caseXXXX.yaml`) and keeps the same distribution logic:
@@ -124,27 +124,28 @@ This command generates config files only (`caseXXXX.yaml`) and keeps the same di
 - combo: 400 (4 combo types * 100 each)
 
 Then you can connect these configs to the main pipeline stages (`build/solve/export-timetable/analyze`) in batch.
+To avoid `screen` scrollback buffer overflow during long runs, commands below redirect all output to log files under `outputs/` and use `python -u` for line-buffered writes. You can monitor progress with `tail -f outputs/<script>.log`.
 
 Batch build from generated configs:
 
 ```powershell
-python scripts/bench_build.py --config-root tests/case_library
+python -u scripts/bench_build.py --config-root tests/case_library > outputs/bench_build.log 2>&1
 ```
 
 Batch solve from generated configs:
 
 ```powershell
-python scripts/bench_solve.py --config-root tests/case_library
+python -u scripts/bench_solve.py --config-root tests/case_library > outputs/bench_solve.log 2>&1
 ```
 
 Resume solve from a specific index range (1-based, inclusive):
 
 ```powershell
 # solve from case #201 to the end
-python scripts/bench_solve.py --config-root tests/case_library --start-index 201
+python -u scripts/bench_solve.py --config-root tests/case_library --start-index 201 > outputs/bench_solve.log 2>&1
 
 # solve only case #201 ~ #400
-python scripts/bench_solve.py --config-root tests/case_library --start-index 201 --end-index 400
+python -u scripts/bench_solve.py --config-root tests/case_library --start-index 201 --end-index 400 > outputs/bench_solve.log 2>&1
 ```
 
 `bench_solve.py` range-related options:
@@ -156,13 +157,13 @@ python scripts/bench_solve.py --config-root tests/case_library --start-index 201
 Batch export-timetable from generated configs:
 
 ```powershell
-python scripts/bench_export_timetable.py --config-root tests/case_library
+python -u scripts/bench_export_timetable.py --config-root tests/case_library > outputs/bench_export_timetable.log 2>&1
 ```
 
 Batch analyze from generated configs:
 
 ```powershell
-python scripts/bench_analyze.py --config-root tests/case_library
+python -u scripts/bench_analyze.py --config-root tests/case_library > outputs/bench_analyze.log 2>&1
 ```
 
 ## Import External `.sol` Into Standard Pipeline
@@ -170,19 +171,19 @@ python scripts/bench_analyze.py --config-root tests/case_library
 Step 1: import external `.sol` files into standardized config/output layout:
 
 ```powershell
-python scripts/import_solutions.py --solutions-root tests/solutions --base-config config/base_demo.yaml --generated-config-root tests/generated_configs --output-root outputs/solutions_import
+python -u scripts/import_solutions.py --solutions-root tests/solutions --base-config config/base_demo.yaml --generated-config-root tests/generated_configs --output-root outputs/solutions_import > outputs/import_solutions.log 2>&1
 ```
 
 Step 2: run export-timetable on imported cases:
 
 ```powershell
-python scripts/bench_export_timetable.py --config-root tests/generated_configs
+python -u scripts/bench_export_timetable.py --config-root tests/generated_configs > outputs/bench_export_timetable.log 2>&1
 ```
 
 Step 3: run analyze on imported cases:
 
 ```powershell
-python scripts/bench_analyze.py --config-root tests/generated_configs
+python -u scripts/bench_analyze.py --config-root tests/generated_configs > outputs/bench_analyze.log 2>&1
 ```
 
 ## Import External `.lp` Into Standard Pipeline
@@ -190,20 +191,20 @@ python scripts/bench_analyze.py --config-root tests/generated_configs
 Step 1: import external `.lp` files into standardized config/output layout:
 
 ```powershell
-python scripts/import_lp.py --lp-root tests/lp --base-config config/base_demo.yaml --generated-config-root tests/generated_configs_lp --output-root outputs/lp_import
+python -u scripts/import_lp.py --lp-root tests/lp --base-config config/base_demo.yaml --generated-config-root tests/generated_configs_lp --output-root outputs/lp_import > outputs/import_lp.log 2>&1
 ```
 
 Step 2: run solve on imported cases:
 
 ```powershell
-python scripts/bench_solve.py --config-root tests/generated_configs_lp
+python -u scripts/bench_solve.py --config-root tests/generated_configs_lp > outputs/bench_solve.log 2>&1
 ```
 
 Step 3: continue with export-timetable and analyze if needed:
 
 ```powershell
-python scripts/bench_export_timetable.py --config-root tests/generated_configs_lp
-python scripts/bench_analyze.py --config-root tests/generated_configs_lp
+python -u scripts/bench_export_timetable.py --config-root tests/generated_configs_lp > outputs/bench_export_timetable.log 2>&1
+python -u scripts/bench_analyze.py --config-root tests/generated_configs_lp > outputs/bench_analyze.log 2>&1
 ```
 ## Common Errors
 

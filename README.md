@@ -174,6 +174,10 @@ Step 1: import external `.sol` files into standardized config/output layout:
 python -u scripts/import_solutions.py --solutions-root tests/solutions --base-config config/base_demo.yaml --generated-config-root tests/generated_configs --output-root outputs/solutions_import > outputs/import_solutions.log 2>&1
 ```
 
+Note: `export-timetable` now supports both solution variable styles:
+- current project style, e.g. `t_e123`
+- legacy style, e.g. `event_start_time(train,station,event_type)` / `event_start_time[train,station,event_type]`
+
 Step 2: run export-timetable on imported cases:
 
 ```powershell

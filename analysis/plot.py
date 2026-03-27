@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import textwrap
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -44,6 +45,7 @@ def plot_timetable(
     output_path: Path,
     show_grid: bool = False,
     title: str = "Train Timetable",
+    subtitle: str = "",
     sheet_name: str = "Sheet1",
 ) -> Path:
     plt.rcParams["axes.unicode_minus"] = False
@@ -101,7 +103,13 @@ def plot_timetable(
     ax.set_title(title, pad=20)
     ax.grid(show_grid)
     plt.xticks(rotation=0)
-    plt.tight_layout()
+
+    if subtitle:
+        subtitle_wrapped = textwrap.fill(subtitle, width=150)
+        fig.text(0.01, 0.965, subtitle_wrapped, ha="left", va="top", fontsize=8, color="dimgray")
+        plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.93))
+    else:
+        plt.tight_layout()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output_path, dpi=500)

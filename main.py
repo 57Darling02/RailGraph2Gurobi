@@ -13,6 +13,47 @@ from core.translator import translate
 from core.validator import validate_inputs
 
 
+def _to_hms(seconds: int) -> str:
+    seconds = max(0, int(seconds))
+    hour = seconds // 3600
+    minute = (seconds % 3600) // 60
+    return f"{hour:02d}:{minute:02d}"
+
+
+def _build_scenario_note(config) -> str:
+    parts = []
+
+    for delay in config.scenarios.delays:
+        parts.append(
+            f"delay: train={delay.train_id}, station={delay.station}, event={delay.event_type}, +{delay.seconds}s"
+        )
+
+    for speed_limit in config.scenarios.speed_limits:
+        parts.append(
+            "speed_limit: "
+            f"segment={speed_limit.start_station}->{speed_limit.end_station}, "
+            f"+{speed_limit.extra_seconds}s, "
+            f"window={_to_hms(speed_limit.start_time)}-{_to_hms(speed_limit.end_time)}"
+        )
+
+    for interruption in config.scenarios.interruptions:
+        parts.append(
+            "interruption: "
+            f"segment={interruption.start_station}->{interruption.end_station}, "
+            f"window={_to_hms(interruption.start_time)}-{_to_hms(interruption.end_time)}"
+        )
+
+    if not parts:
+        return "Scenarios: none"
+
+    max_items = 6
+    shown = parts[:max_items]
+    if len(parts) > max_items:
+        shown.append(f"...(+{len(parts) - max_items} more)")
+
+    return "Scenarios: " + " | ".join(shown)
+
+
 def _load_translated(config_path: Path):
     config = load_config(config_path)
     timetable_bundle = load_timetable(
@@ -81,6 +122,7 @@ def cmd_analyze(config_path: Path) -> int:
             config.analyze.plot_output_path,
             show_grid=config.analyze.plot_grid,
             title=config.analyze.plot_title,
+            subtitle=_build_scenario_note(config),
             sheet_name=config.analyze.adjusted_timetable_sheet_name,
         )
         print(f"Plot exported: {plot_path}")

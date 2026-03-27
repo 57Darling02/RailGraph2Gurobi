@@ -37,10 +37,10 @@ def parse_args() -> argparse.Namespace:
         help="Prefix used in generated config project.output_dir (e.g. outputs/case_library).",
     )
     parser.add_argument("--seed", type=int, default=20260320)
-    parser.add_argument("--delay-count", type=int, default=100)
-    parser.add_argument("--speed-count", type=int, default=100)
-    parser.add_argument("--disruption-count", type=int, default=100)
-    parser.add_argument("--combo-per-type", type=int, default=100)
+    parser.add_argument("--delay-count", type=int, default=10)
+    parser.add_argument("--speed-count", type=int, default=10)
+    parser.add_argument("--disruption-count", type=int, default=10)
+    parser.add_argument("--combo-per-type", type=int, default=10)
     parser.add_argument("--clean", action="store_true")
     return parser.parse_args()
 
@@ -58,14 +58,12 @@ def _write_config_only(case_path: Path, config_payload: Dict[str, object], _meta
 
 
 def _validate_counts(args: argparse.Namespace) -> None:
-    if args.delay_count != 100:
-        raise ValueError("delay-count must be 100 (4*25).")
-    if args.speed_count != 100:
-        raise ValueError("speed-count must be 100 (5*20).")
-    if args.disruption_count != 100:
-        raise ValueError("disruption-count must be 100 (34/33/33).")
-    if args.combo_per_type != 100:
-        raise ValueError("combo-per-type must be 100 (4 types * 100 = 400).")
+    gen.validate_case_counts(
+        delay_count=args.delay_count,
+        speed_count=args.speed_count,
+        disruption_count=args.disruption_count,
+        combo_per_type=args.combo_per_type,
+    )
 
 
 def main() -> None:

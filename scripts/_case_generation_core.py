@@ -47,7 +47,7 @@ SPEED_LEVELS = [
     ("L5_250kmh", 60, 179, 20),
 ]
 
-INTERRUPTION_SPAN_COUNTS = [(1, 34), (2, 33), (3, 33)]
+INTERRUPTION_SPAN_WEIGHTS = [(1, 34), (2, 33), (3, 33)]
 COMBO_TYPES = [
     "delay_speedlimit",
     "speedlimit_disruption",
@@ -81,10 +81,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-config", default="", help="Base config path. If omitted, auto-select from config/*.yaml.")
     parser.add_argument("--output-root", default="tests/case_library")
     parser.add_argument("--seed", type=int, default=20260320)
-    parser.add_argument("--delay-count", type=int, default=100)
-    parser.add_argument("--speed-count", type=int, default=100)
-    parser.add_argument("--disruption-count", type=int, default=100)
-    parser.add_argument("--combo-per-type", type=int, default=100)
+    parser.add_argument("--delay-count", type=int, default=10)
+    parser.add_argument("--speed-count", type=int, default=10)
+    parser.add_argument("--disruption-count", type=int, default=10)
+    parser.add_argument("--combo-per-type", type=int, default=10)
     parser.add_argument("--clean", action="store_true")
     return parser.parse_args()
 
@@ -121,6 +121,66 @@ def to_hms(seconds: int) -> str:
     minute = (seconds % 3600) // 60
     second = seconds % 60
     return f"{hour:02d}:{minute:02d}:{second:02d}"
+
+
+def proportional_counts(total: int, weights: Sequence[int]) -> List[int]:
+    if total < 0:
+        raise ValueError("total must be >= 0.")
+    if not weights:
+        return []
+    if any(weight < 0 for weight in weights):
+        raise ValueError("weights must be >= 0.")
+    weight_sum = sum(weights)
+    if weight_sum <= 0:
+        raise ValueError("weights must contain at least one positive value.")
+    if total == 0:
+        return [0] * len(weights)
+
+    scaled = [total * weight / weight_sum for weight in weights]
+    floors = [int(value) for value in scaled]
+    remainder = total - sum(floors)
+    order = sorted(
+        range(len(weights)),
+        key=lambda idx: (scaled[idx] - floors[idx], weights[idx], -idx),
+        reverse=True,
+    )
+    for idx in order[:remainder]:
+        floors[idx] += 1
+    return floors
+
+
+def validate_case_counts(
+    delay_count: int,
+    speed_count: int,
+    disruption_count: int,
+    combo_per_type: int,
+) -> None:
+    fields = {
+        "delay-count": delay_count,
+        "speed-count": speed_count,
+        "disruption-count": disruption_count,
+        "combo-per-type": combo_per_type,
+    }
+    for name, value in fields.items():
+        if value < 0:
+            raise ValueError(f"{name} must be >= 0.")
+
+    total = delay_count + speed_count + disruption_count + combo_per_type * len(COMBO_TYPES)
+    if total <= 0:
+        raise ValueError("At least one case count must be greater than 0.")
+
+
+def weighted_level_sequence(
+    rng: random.Random,
+    level_specs: Sequence[Tuple[str, int, int, int]],
+    count: int,
+) -> List[Tuple[str, int, int]]:
+    quotas = proportional_counts(count, [weight for _, _, _, weight in level_specs])
+    seq: List[Tuple[str, int, int]] = []
+    for (level, low, high, _weight), quota in zip(level_specs, quotas):
+        seq.extend([(level, low, high)] * quota)
+    rng.shuffle(seq)
+    return seq
 
 
 def random_window(rng: random.Random, min_len: int = 900, max_len: int = 3600) -> Tuple[int, int]:
@@ -236,10 +296,10 @@ def pick_contiguous_sections(rng: random.Random, station_order: Sequence[str], s
 
 
 def combo_relation_plan(rng: random.Random, count: int) -> List[Tuple[str, str]]:
-    if count % 4 != 0:
-        raise ValueError("combo-per-type must be divisible by 4.")
-    time_rel = ["overlap"] * (count // 2) + ["non_overlap"] * (count - count // 2)
-    space_rel = ["same"] * (count // 4) + ["adjacent"] * (count // 2) + ["distant"] * (count // 4)
+    time_counts = proportional_counts(count, [1, 1])
+    time_rel = ["overlap"] * time_counts[0] + ["non_overlap"] * time_counts[1]
+    space_counts = proportional_counts(count, [1, 2, 1])
+    space_rel = ["same"] * space_counts[0] + ["adjacent"] * space_counts[1] + ["distant"] * space_counts[2]
     rng.shuffle(time_rel)
     rng.shuffle(space_rel)
     return list(zip(time_rel, space_rel))
@@ -330,12 +390,7 @@ def write_case(case_dir: Path, config_payload: Dict[str, object], meta_payload: 
         json.dump(meta_payload, f, ensure_ascii=False, indent=2)
 
 def generate_delay_cases(rng: random.Random, base: BaseData, output_root: Path, case_index: int, count: int) -> int:
-    seq: List[Tuple[str, int, int]] = []
-    for level, low, high, quota in DELAY_LEVELS:
-        seq.extend([(level, low, high)] * quota)
-    if len(seq) != count:
-        raise ValueError(f"delay-count must be {len(seq)}")
-    rng.shuffle(seq)
+    seq = weighted_level_sequence(rng, DELAY_LEVELS, count)
 
     for level, low, high in seq:
         train_id, station, event_type, event_time = rng.choice(base.event_candidates)
@@ -373,12 +428,7 @@ def generate_delay_cases(rng: random.Random, base: BaseData, output_root: Path, 
 
 
 def generate_speed_cases(rng: random.Random, base: BaseData, output_root: Path, case_index: int, count: int) -> int:
-    seq: List[Tuple[str, int, int]] = []
-    for level, low, high, quota in SPEED_LEVELS:
-        seq.extend([(level, low, high)] * quota)
-    if len(seq) != count:
-        raise ValueError(f"speed-count must be {len(seq)}")
-    rng.shuffle(seq)
+    seq = weighted_level_sequence(rng, SPEED_LEVELS, count)
 
     for level, low, high in seq:
         section = rng.choice(base.section_candidates)
@@ -419,10 +469,9 @@ def generate_speed_cases(rng: random.Random, base: BaseData, output_root: Path, 
 
 def generate_disruption_cases(rng: random.Random, base: BaseData, output_root: Path, case_index: int, count: int) -> int:
     seq: List[int] = []
-    for span, quota in INTERRUPTION_SPAN_COUNTS:
+    quotas = proportional_counts(count, [weight for _span, weight in INTERRUPTION_SPAN_WEIGHTS])
+    for (span, _weight), quota in zip(INTERRUPTION_SPAN_WEIGHTS, quotas):
         seq.extend([span] * quota)
-    if len(seq) != count:
-        raise ValueError(f"disruption-count must be {len(seq)}")
     rng.shuffle(seq)
 
     for span in seq:
@@ -586,14 +635,12 @@ def write_manifest(
 
 def main() -> None:
     args = parse_args()
-    if args.delay_count != 100:
-        raise ValueError("delay-count must be 100 (4*25).")
-    if args.speed_count != 100:
-        raise ValueError("speed-count must be 100 (5*20).")
-    if args.disruption_count != 100:
-        raise ValueError("disruption-count must be 100 (34/33/33).")
-    if args.combo_per_type != 100:
-        raise ValueError("combo-per-type must be 100 (4 types * 100 = 400).")
+    validate_case_counts(
+        delay_count=args.delay_count,
+        speed_count=args.speed_count,
+        disruption_count=args.disruption_count,
+        combo_per_type=args.combo_per_type,
+    )
 
     base_config = resolve_base_config(args.base_config)
 

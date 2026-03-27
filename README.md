@@ -110,7 +110,7 @@ Mileage first 2 columns must be:
 station | mileage
 ```
 
-## Batch Case Config Generation (700 cases)
+## Batch Case Config Generation (70 cases)
 
 ```powershell
 python -u scripts/case_library_builder.py --output-root tests/case_library --project-output-root outputs/case_library --clean > outputs/case_library_builder.log 2>&1
@@ -118,12 +118,13 @@ python -u scripts/case_library_builder.py --output-root tests/case_library --pro
 
 This command generates config files only (`caseXXXX.yaml`) and keeps the same distribution logic:
 
-- delay: 100
-- speedlimit: 100
-- disruption: 100
-- combo: 400 (4 combo types * 100 each)
+- delay: 10
+- speedlimit: 10
+- disruption: 10
+- combo: 40 (4 combo types * 10 each)
 
 Then you can connect these configs to the main pipeline stages (`build/solve/export-timetable/analyze`) in batch.
+If you need the original 700-case setup, run with: `--delay-count 100 --speed-count 100 --disruption-count 100 --combo-per-type 100`.
 To avoid `screen` scrollback buffer overflow during long runs, commands below redirect all output to log files under `outputs/` and use `python -u` for line-buffered writes. You can monitor progress with `tail -f outputs/<script>.log`.
 
 Batch build from generated configs:

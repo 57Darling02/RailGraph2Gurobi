@@ -29,8 +29,8 @@ export-timetable:
 
 analyze:
   enable_metrics: true
-  enable_plot: false
-  plot_grid: false
+  enable_plot: true
+  plot_grid: true
   plot_title: Train Timetable - Base Demo
   adj_timetable_path: ""
   adj_timetable_sheet_name: Sheet1

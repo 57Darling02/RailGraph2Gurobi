@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from analysis.scenario_report import build_case_scenario_report_data
 from core.builder import build_model
 from core.exporter import export_lp
 from core.loader import load_config, load_mileage_table, load_timetable
@@ -18,6 +19,39 @@ def _to_hms(seconds: int) -> str:
     hour = seconds // 3600
     minute = (seconds % 3600) // 60
     return f"{hour:02d}:{minute:02d}"
+
+
+def _scenario_config_to_payload(scenarios) -> dict:
+    return {
+        "delays": [
+            {
+                "train_id": item.train_id,
+                "station": item.station,
+                "event_type": item.event_type,
+                "seconds": item.seconds,
+            }
+            for item in scenarios.delays
+        ],
+        "speed_limits": [
+            {
+                "start_station": item.start_station,
+                "end_station": item.end_station,
+                "extra_seconds": item.extra_seconds,
+                "start_time": f"{item.start_time // 3600:02d}:{(item.start_time % 3600) // 60:02d}:{item.start_time % 60:02d}",
+                "end_time": f"{item.end_time // 3600:02d}:{(item.end_time % 3600) // 60:02d}:{item.end_time % 60:02d}",
+            }
+            for item in scenarios.speed_limits
+        ],
+        "interruptions": [
+            {
+                "start_station": item.start_station,
+                "end_station": item.end_station,
+                "start_time": f"{item.start_time // 3600:02d}:{(item.start_time % 3600) // 60:02d}:{item.start_time % 60:02d}",
+                "end_time": f"{item.end_time // 3600:02d}:{(item.end_time % 3600) // 60:02d}:{item.end_time % 60:02d}",
+            }
+            for item in scenarios.interruptions
+        ],
+    }
 
 
 def _build_scenario_note(config) -> str:
@@ -117,6 +151,14 @@ def cmd_analyze(config_path: Path) -> int:
     if config.analyze.enable_plot:
         from analysis.plot import plot_timetable
 
+        _config_for_plot, translated = _load_translated(config_path)
+        scenario_overlay = build_case_scenario_report_data(
+            case_id=config.project.name,
+            scenarios=_scenario_config_to_payload(config.scenarios),
+            config=config,
+            translated=translated,
+        )["scenario_rows"]
+
         plot_path = plot_timetable(
             config.analyze.plot_timetable_path,
             config.analyze.plot_output_path,
@@ -124,6 +166,9 @@ def cmd_analyze(config_path: Path) -> int:
             title=config.analyze.plot_title,
             subtitle=_build_scenario_note(config),
             sheet_name=config.analyze.adjusted_timetable_sheet_name,
+            scenario_overlay=scenario_overlay,
+            mileage_path=config.input.mileage_path,
+            mileage_sheet_name=config.input.mileage_sheet_name,
         )
         print(f"Plot exported: {plot_path}")
     return 0

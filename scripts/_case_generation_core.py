@@ -289,10 +289,25 @@ def pick_delay_event_by_relation(
     return rng.choice(candidates)
 
 
-def pick_contiguous_sections(rng: random.Random, station_order: Sequence[str], span: int) -> List[Tuple[str, str]]:
-    span = max(1, min(span, len(station_order) - 1))
-    start_idx = rng.randint(0, len(station_order) - span - 1)
-    return [(station_order[i], station_order[i + 1]) for i in range(start_idx, start_idx + span)]
+def pick_contiguous_sections(rng: random.Random, section_candidates: List[Tuple[str, str]], span: int) -> List[Tuple[str, str]]:
+    span = max(1, min(span, len(section_candidates)))
+    # Build adjacency map to find contiguous chains in the actual train travel direction.
+    next_map: Dict[str, str] = {s: e for s, e in section_candidates}
+    valid_chains: List[List[Tuple[str, str]]] = []
+    for s, e in section_candidates:
+        chain: List[Tuple[str, str]] = [(s, e)]
+        cur = e
+        for _ in range(span - 1):
+            if cur not in next_map:
+                break
+            nxt = next_map[cur]
+            chain.append((cur, nxt))
+            cur = nxt
+        if len(chain) == span:
+            valid_chains.append(chain)
+    if not valid_chains:
+        return list(rng.sample(section_candidates, min(span, len(section_candidates))))
+    return list(rng.choice(valid_chains))
 
 
 def combo_relation_plan(rng: random.Random, count: int) -> List[Tuple[str, str]]:
@@ -475,7 +490,7 @@ def generate_disruption_cases(rng: random.Random, base: BaseData, output_root: P
     rng.shuffle(seq)
 
     for span in seq:
-        sections = pick_contiguous_sections(rng, base.station_order, span=span)
+        sections = pick_contiguous_sections(rng, base.section_candidates, span=span)
         window = random_window(rng, min_len=1200, max_len=4200)
         case_id = f"case{case_index:04d}_disruption_s{span}"
         cfg = base_config_payload(case_id, f"outputs/case_library/{case_id}", base)

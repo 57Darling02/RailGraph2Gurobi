@@ -152,6 +152,18 @@ def _validate_station_coverage(
             )
 
 
+def _build_actual_sections(timetable_rows: List[TimetableRow]) -> set:
+    """Build the set of (start, end) section pairs that trains actually traverse."""
+    by_train: Dict[str, List[TimetableRow]] = defaultdict(list)
+    for row in timetable_rows:
+        by_train[row.train_id].append(row)
+    sections: set = set()
+    for rows in by_train.values():
+        for i in range(len(rows) - 1):
+            sections.add((rows[i].station, rows[i + 1].station))
+    return sections
+
+
 def _validate_scenarios(config: AppConfig, timetable_rows: List[TimetableRow], mileage_rows: List[MileageRow]) -> None:
     event_index = {
         (row.train_id, row.station, "arr")
@@ -167,6 +179,7 @@ def _validate_scenarios(config: AppConfig, timetable_rows: List[TimetableRow], m
     )
 
     station_set = {row.station for row in mileage_rows}
+    actual_sections = _build_actual_sections(timetable_rows)
 
     for delay in config.scenarios.delays:
         if delay.event_type not in {"arr", "dep"}:
@@ -185,12 +198,26 @@ def _validate_scenarios(config: AppConfig, timetable_rows: List[TimetableRow], m
             raise ValueError("Speed limit start_time must be earlier than end_time")
         if speed_limit.start_station not in station_set or speed_limit.end_station not in station_set:
             raise ValueError("Speed limit station not found in mileage table")
+        section = (speed_limit.start_station, speed_limit.end_station)
+        if section not in actual_sections:
+            reverse = (speed_limit.end_station, speed_limit.start_station)
+            hint = f" (did you mean {reverse[0]}->{reverse[1]}?)" if reverse in actual_sections else ""
+            raise ValueError(
+                f"Speed limit section {section[0]}->{section[1]} does not match any train route{hint}"
+            )
 
     for interruption in config.scenarios.interruptions:
         if interruption.start_time >= interruption.end_time:
             raise ValueError("Interruption start_time must be earlier than end_time")
         if interruption.start_station not in station_set or interruption.end_station not in station_set:
             raise ValueError("Interruption station not found in mileage table")
+        section = (interruption.start_station, interruption.end_station)
+        if section not in actual_sections:
+            reverse = (interruption.end_station, interruption.start_station)
+            hint = f" (did you mean {reverse[0]}->{reverse[1]}?)" if reverse in actual_sections else ""
+            raise ValueError(
+                f"Interruption section {section[0]}->{section[1]} does not match any train route{hint}"
+            )
 
 
 def _validate_solver(config: AppConfig) -> None:

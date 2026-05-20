@@ -116,8 +116,10 @@ def cmd_build(config_path: Path) -> int:
 
 def cmd_solve(config_path: Path) -> int:
     config = load_config(config_path)
-    objective, _values = solve_lp(config.solve.lp_path, config.solve.solution_path)
-    print(f"Objective: {objective:g}")
+    result = solve_lp(config.solve.lp_path, config.solve.solution_path)
+    print(f"Objective: {result.objective:g}")
+    if result.timed_out:
+        print(f"Warning: time limit reached, MIP gap = {result.mip_gap:.4%}")
     print(f"Solution exported: {config.solve.solution_path}")
     return 0
 
